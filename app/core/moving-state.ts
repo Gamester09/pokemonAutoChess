@@ -1,7 +1,6 @@
 import Player from "../models/colyseus-models/player"
-import { Transfer } from "../types"
 import { Effect } from "../types/enum/Effect"
-import { BoardEvent, PokemonActionState } from "../types/enum/Game"
+import { PokemonActionState } from "../types/enum/Game"
 import { Passive } from "../types/enum/Passive"
 import { Synergy } from "../types/enum/Synergy"
 import { Weather } from "../types/enum/Weather"
@@ -9,9 +8,11 @@ import { distanceC } from "../utils/distance"
 import Board from "./board"
 import { PokemonEntity, getMoveSpeed } from "./pokemon-entity"
 import PokemonState from "./pokemon-state"
-import {findPath} from "../utils/pathfind"
+import { findPath } from "../utils/pathfind"
 
 export default class MovingState extends PokemonState {
+  name = "moving"
+
   update(
     pokemon: PokemonEntity,
     dt: number,
@@ -66,7 +67,7 @@ export default class MovingState extends PokemonState {
     coordinates: { x: number; y: number }
   ) {
     //logger.debug('move attempt');
-    
+
     let x: number | undefined = undefined
     let y: number | undefined = undefined
 
@@ -89,18 +90,16 @@ export default class MovingState extends PokemonState {
             .getCellsBetween(x, y, pokemon.positionX, pokemon.positionY)
             .forEach((cell) => {
               if (cell.x !== x || cell.y !== y) {
-                pokemon.simulation.room.broadcast(Transfer.BOARD_EVENT, {
-                  simulationId: pokemon.simulation.id,
-                  type: BoardEvent.POISON_GAS,
-                  x: cell.x,
-                  y: cell.y
-                })
-                board.effects[board.columns * cell.y + cell.x] =
-                  Effect.POISON_GAS
+                board.addBoardEffect(
+                  cell.x,
+                  cell.y,
+                  Effect.POISON_GAS,
+                  pokemon.simulation
+                )
               }
             })
         }
-        
+
         // logger.debug(`pokemon ${pokemon.name} jumped from (${pokemon.positionX},${pokemon.positionY}) to (${x},${y}), (desired direction (${coordinates.x}, ${coordinates.y})), orientation: ${pokemon.orientation}`);
         board.swapValue(pokemon.positionX, pokemon.positionY, x, y)
         pokemon.orientation = board.orientation(
@@ -116,21 +115,31 @@ export default class MovingState extends PokemonState {
       // Using pathfinding to get optimal path
       //console.debug('Current Pokemon:', pokemon.name, 'Position:', pokemon.positionX, pokemon.positionY);
       //console.debug('target Pokemons position:', coordinates.x , coordinates.y);
-      const cells = board.getOuterRangeCells(coordinates.x, coordinates.y, pokemon.range)
+      const cells = board.getOuterRangeCells(
+        coordinates.x,
+        coordinates.y,
+        pokemon.range
+      )
       let distance = 999
       cells.forEach((cell) => {
         if (cell.value === undefined) {
-          const candidateDistance = findPath(board, [pokemon.positionX, pokemon.positionY],[cell.x, cell.y])
+          const candidateDistance = findPath(
+            board,
+            [pokemon.positionX, pokemon.positionY],
+            [cell.x, cell.y]
+          )
           //logger.debug(`${pokemon.name} - Candidate (${cell.x},${cell.y}) to ${coordinates.x},${coordinates.y}, distance: ${candidateDistance}`);
-          if (candidateDistance.length < distance && candidateDistance.length !== 0) {
+          if (
+            candidateDistance.length < distance &&
+            candidateDistance.length !== 0
+          ) {
             distance = candidateDistance.length
-            const nextStep = candidateDistance[0];
-            x = nextStep[0];
-            y = nextStep[1];
+            const nextStep = candidateDistance[0]
+            x = nextStep[0]
+            y = nextStep[1]
           }
         }
-      }
-    )
+      })
       if (x !== undefined && y !== undefined) {
         pokemon.orientation = board.orientation(
           pokemon.positionX,
@@ -145,7 +154,7 @@ export default class MovingState extends PokemonState {
       }
     }
   }
-  
+
   onEnter(pokemon: PokemonEntity) {
     super.onEnter(pokemon)
     pokemon.action = PokemonActionState.WALK

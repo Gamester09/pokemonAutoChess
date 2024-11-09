@@ -16,19 +16,18 @@ import { TournamentSchema } from "../models/colyseus-models/tournament"
 import { Effects } from "../models/effects"
 import GameRoom from "../rooms/game-room"
 import { ILeaderboardInfo } from "../types/interfaces/LeaderboardInfo"
-import { ISpecialGamePlanned } from "../types/interfaces/Lobby"
 import { Ability } from "./enum/Ability"
 import { DungeonPMDO } from "./enum/Dungeon"
-import { Effect } from "./enum/Effect"
+import { BoardEffect, Effect } from "./enum/Effect"
 import { Emotion } from "./enum/Emotion"
 import {
   AttackType,
-  BoardEvent,
   GameMode,
   Orientation,
   PokemonActionState,
   Rarity,
-  Stat
+  Stat,
+  Team
 } from "./enum/Game"
 import { Item } from "./enum/Item"
 import { Passive } from "./enum/Passive"
@@ -60,6 +59,7 @@ export enum Transfer {
   DRAG_DROP = "DRAG_DROP",
   DRAG_DROP_COMBINE = "DRAG_DROP_COMBINE",
   DRAG_DROP_ITEM = "DRAG_DROP_ITEM",
+  SWITCH_BENCH_AND_BOARD = "SWITCH_BENCH_AND_BOARD",
   SELL_POKEMON = "SELL_POKEMON",
   REMOVE_FROM_SHOP = "REMOVE_FROM_SHOP",
   CHANGE_SELECTED_EMOTION = "CHANGE_SELECTED_EMOTION",
@@ -85,6 +85,7 @@ export enum Transfer {
   GAME_END = "GAME_END",
   CHANGE_ROOM_NAME = "CHANGE_ROOM_NAME",
   CHANGE_ROOM_PASSWORD = "CHANGE_ROOM_PASSWORD",
+  CHANGE_ROOM_RANKS = "CHANGE_ROOM_RANKS",
   BUY_EMOTION = "BUY_EMOTION",
   BOOSTER_CONTENT = "BOOSTER_CONTENT",
   USER = "USER",
@@ -117,6 +118,7 @@ export enum Transfer {
   PLAYER_INCOME = "PLAYER_INCOME",
   PLAYER_DAMAGE = "PLAYER_DAMAGE",
   ROOMS = "ROOMS",
+  REQUEST_ROOM = "REQUEST_ROOM",
   ADD_ROOM = "ADD_ROOM",
   REMOVE_ROOM = "REMOVE_ROOM",
   ADD_BOT_DATABASE = "ADD_BOT_DATABASE",
@@ -131,7 +133,8 @@ export enum Transfer {
   USER_PROFILE = "USER_PROFILE",
   PICK_BERRY = "PICK_BERRY",
   PRELOAD_MAPS = "PRELOAD_MAPS",
-  NPC_DIALOG = "NPC_DIALOG"
+  NPC_DIALOG = "NPC_DIALOG",
+  HEAP_SNAPSHOT = "HEAP_SNAPSHOT"
 }
 
 export enum AttackSprite {
@@ -254,7 +257,6 @@ export interface ICustomLobbyState extends Schema {
   leaderboard: ILeaderboardInfo[]
   botLeaderboard: ILeaderboardInfo[]
   levelLeaderboard: ILeaderboardInfo[]
-  nextSpecialGame: ISpecialGamePlanned
   tournaments: ArraySchema<TournamentSchema>
   clients: number
 }
@@ -331,12 +333,13 @@ export interface IPlayer {
   board: MapSchema<Pokemon>
   shop: ArraySchema<Pkm>
   simulationId: string
-  simulationTeamIndex: number
+  team: Team
   experienceManager: ExperienceManager
   synergies: Synergies
   money: number
   life: number
   shopLocked: boolean
+  shopFreeRolls: number
   streak: number
   interest: number
   opponentId: string
@@ -354,7 +357,6 @@ export interface IPlayer {
   role: Role
   itemsProposition: ArraySchema<Item>
   pokemonsProposition: ArraySchema<PkmProposition>
-  rerollCount: number
   loadingProgress: number
   effects: Effects
   isBot: boolean
@@ -367,6 +369,13 @@ export interface IPlayer {
   ultraRegionalPool: Pkm[]
   opponents: Map<string, number>
   ghost: boolean
+  rerollCount: number
+  totalMoneyEarned: number
+  totalPlayerDamageDealt: number
+  wildChance: number
+  eggChance: number
+  lightX: number
+  lightY: number
 }
 
 export interface IPokemon {
@@ -389,6 +398,7 @@ export interface IPokemon {
   range: number
   stars: number
   maxPP: number
+  luck: number
   ap: number
   skill: Ability
   passive: Passive
@@ -401,6 +411,7 @@ export interface IPokemon {
   canBePlaced: boolean
   canBeCloned: boolean
   canHoldItems: boolean
+  deathCount: number
 }
 
 export interface IExperienceManager {
@@ -463,8 +474,15 @@ export function instanceofPokemonEntity(
 export interface IPokemonEntity {
   simulation: ISimulation
   refToBoardPokemon: IPokemon
+  get player(): IPlayer | undefined
   applyStat(stat: Stat, value: number): void
   addAbilityPower(
+    value: number,
+    caster: IPokemonEntity,
+    apBoost: number,
+    crit: boolean
+  ): void
+  addLuck(
     value: number,
     caster: IPokemonEntity,
     apBoost: number,
@@ -538,6 +556,7 @@ export interface IPokemonEntity {
   ): void
   skydiveTo(x: number, y: number, board: Board): void
   toIdleState(): void
+  toMovingState(): void
   physicalDamage: number
   specialDamage: number
   trueDamage: number
@@ -558,6 +577,7 @@ export interface IPokemonEntity {
   atk: number
   def: number
   speDef: number
+  luck: number
   attackType: AttackType
   life: number
   shield: number
@@ -591,6 +611,7 @@ export interface IStatus {
   magmaStorm: boolean
   burn: boolean
   silence: boolean
+  fatigue: boolean
   poisonStacks: number
   freeze: boolean
   protect: boolean
@@ -645,6 +666,7 @@ export interface IPreparationMetadata {
   type: "preparation"
   gameStartedAt: string | null
   minRank: string | null
+  maxRank: string | null
   gameMode: GameMode
   whitelist: string[]
   blacklist: string[]
@@ -716,7 +738,6 @@ export enum Title {
   HARLEQUIN = "HARLEQUIN",
   TACTICIAN = "TACTICIAN",
   STRATEGIST = "STRATEGIST",
-  GLITCH_TRAINER = "GLITCH_TRAINER",
   NURSE = "NURSE",
   GARDIAN = "GARDIAN",
   DUKE = "DUKE",
@@ -727,7 +748,6 @@ export enum Title {
   GYM_CHALLENGER = "GYM_CHALLENGER",
   GYM_TRAINER = "GYM_TRAINER",
   ACE_TRAINER = "ACE_TRAINER",
-  BACKER = "BACKER",
   TYRANT = "TYRANT",
   SURVIVOR = "SURVIVOR",
   GAMBLER = "GAMBLER",
@@ -752,7 +772,7 @@ export enum Title {
 
 export interface IBoardEvent {
   simulationId: string
-  type: BoardEvent
+  effect: BoardEffect
   x: number
   y: number
 }

@@ -80,6 +80,7 @@ import {
   OnSellDropCommand,
   OnShopCommand,
   OnSpectateCommand,
+  OnSwitchBenchAndBoardCommand,
   OnUpdateCommand
 } from "./commands/game-commands"
 import GameState from "./states/game-state"
@@ -108,6 +109,7 @@ export default class GameRoom extends Room<GameState> {
     noElo: boolean
     gameMode: GameMode
     minRank: EloRank | null
+    maxRank: EloRank | null
     tournamentId: string | null
     bracketId: string | null
   }) {
@@ -134,7 +136,8 @@ export default class GameRoom extends Room<GameState> {
         options.name,
         options.noElo,
         options.gameMode,
-        options.minRank
+        options.minRank,
+        options.maxRank
       )
     )
     this.miniGame.create(
@@ -206,12 +209,6 @@ export default class GameRoom extends Room<GameState> {
               user.role,
               this.state
             )
-
-            player.listen("money", (value: number, previousValue = 0) => {
-              if (value > previousValue) {
-                player.totalMoneyEarned += value - previousValue
-              }
-            })
 
             this.state.players.set(user.uid, player)
             this.state.shop.assignShop(player, false, this.state)
@@ -389,6 +386,22 @@ export default class GameRoom extends Room<GameState> {
         }
       }
     })
+
+    this.onMessage(
+      Transfer.SWITCH_BENCH_AND_BOARD,
+      (client, pokemonId: string) => {
+        if (!this.state.gameFinished && client.auth) {
+          try {
+            this.dispatcher.dispatch(new OnSwitchBenchAndBoardCommand(), {
+              client,
+              pokemonId
+            })
+          } catch (error) {
+            logger.error("sell drop error", pokemonId)
+          }
+        }
+      }
+    )
 
     this.onMessage(Transfer.SPECTATE, (client, spectatedPlayerId: string) => {
       if (client.auth) {
@@ -686,7 +699,6 @@ export default class GameRoom extends Room<GameState> {
             if (rank === 1) {
               usr.wins += 1
               if (this.state.gameMode === GameMode.RANKED) {
-                usr.booster += 1
                 player.titles.add(Title.VANQUISHER)
                 const minElo = Math.min(
                   ...values(this.state.players).map((p) => p.elo)
@@ -694,7 +706,7 @@ export default class GameRoom extends Room<GameState> {
                 if (usr.elo === minElo && humans.length >= 8) {
                   player.titles.add(Title.OUTSIDER)
                 }
-                this.presence.publish("ranked-lobby-winner", player)
+                //this.presence.publish("ranked-lobby-winner", player)
               }
             }
 
@@ -745,6 +757,10 @@ export default class GameRoom extends Room<GameState> {
               }
 
               const dbrecord = this.transformToSimplePlayer(player)
+              const synergiesMap = new Map<Synergy, number>()
+              player.synergies.forEach((v, k) => {
+                v > 0 && synergiesMap.set(k, v)
+              })
               DetailledStatistic.create({
                 time: Date.now(),
                 name: dbrecord.name,
@@ -753,7 +769,8 @@ export default class GameRoom extends Room<GameState> {
                 nbplayers: humans.length + bots.length,
                 avatar: dbrecord.avatar,
                 playerId: dbrecord.id,
-                elo: elo
+                elo: elo,
+                synergies: synergiesMap
               })
             }
 
@@ -906,16 +923,6 @@ export default class GameRoom extends Room<GameState> {
         )
         if (pokemonEvolved) {
           hasEvolved = true
-          // check item evolution rule after count evolution (example: Clefairy)
-          this.checkEvolutionsAfterItemAcquired(playerId, pokemonEvolved)
-
-          if (
-            pokemonEvolved.items.has(Item.RARE_CANDY) &&
-            pokemonEvolved.evolution === Pkm.DEFAULT
-          ) {
-            player.items.push(Item.RARE_CANDY)
-            pokemonEvolved.items.delete(Item.RARE_CANDY)
-          }
         }
       }
     })
@@ -937,10 +944,6 @@ export default class GameRoom extends Room<GameState> {
         player,
         this.state.stageLevel
       )
-      if (pokemonEvolved) {
-        // check additional item evolution rules. Not used yet in the game but we never know
-        this.checkEvolutionsAfterItemAcquired(playerId, pokemonEvolved)
-      }
     }
   }
 
@@ -1009,6 +1012,9 @@ export default class GameRoom extends Room<GameState> {
         this.state.additionalPokemons.push(pkm as Pkm)
         this.state.shop.addAdditionalPokemon(pkm)
       }
+
+      // update regional pokemons in case some regional variants of add picks are now available
+      this.state.players.forEach((p) => p.updateRegionalPool(this.state, false))
 
       if (
         player.itemsProposition.length > 0 &&

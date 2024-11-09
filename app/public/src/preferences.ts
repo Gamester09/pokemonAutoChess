@@ -5,11 +5,14 @@ export type Keybindings = {
   sell: string
   buy_xp: string
   refresh: string
+  lock: string
+  switch: string
   emote: string
 }
 export interface IPreferencesState {
   musicVolume: number
   sfxVolume: number
+  playInBackground: boolean
   showDpsMeter: boolean
   showDetailsOnHover: boolean
   showDamageNumbers: boolean
@@ -21,6 +24,7 @@ export interface IPreferencesState {
 const defaultPreferences: IPreferencesState = {
   musicVolume: 30,
   sfxVolume: 30,
+  playInBackground: false,
   showDpsMeter: false,
   showDetailsOnHover: false,
   showDamageNumbers: true,
@@ -30,6 +34,8 @@ const defaultPreferences: IPreferencesState = {
     sell: "E",
     buy_xp: "F",
     refresh: "D",
+    lock: "R",
+    switch: "Space",
     emote: "A"
   }
 }
@@ -40,7 +46,11 @@ export function loadPreferences(): IPreferencesState {
   if (localStore.has(LocalStoreKeys.PREFERENCES)) {
     return {
       ...defaultPreferences,
-      ...localStore.get(LocalStoreKeys.PREFERENCES)
+      ...localStore.get(LocalStoreKeys.PREFERENCES),
+      keybindings: {
+        ...defaultPreferences.keybindings,
+        ...localStore.get(LocalStoreKeys.PREFERENCES)?.keybindings
+      }
     }
   } else {
     return defaultPreferences

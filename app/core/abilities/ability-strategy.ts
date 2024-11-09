@@ -104,21 +104,18 @@ export function soundBoost(pokemon: PokemonEntity, board: Board) {
       pokemon.positionY,
       chimecho.positionX,
       chimecho.positionY
-    ) <= 2
+    ) <= 1
   board.forEach((x: number, y: number, ally: PokemonEntity | undefined) => {
     if (ally && pokemon.team === ally.team) {
       ally.status.sleep = false
-      if (
-        pokemon.effects.has(Effect.LARGO) ||
-        pokemon.effects.has(Effect.ALLEGRO) ||
-        pokemon.effects.has(Effect.PRESTO)
-      ) {
-        ally.addAttack(chimechoBoost ? 2 : 1, pokemon, 0, false)
+      if (pokemon.effects.has(Effect.LARGO)) {
+        ally.addAttack(chimechoBoost ? 4 : 2, pokemon, 0, false)
       }
       if (
         pokemon.effects.has(Effect.ALLEGRO) ||
         pokemon.effects.has(Effect.PRESTO)
       ) {
+        ally.addAttack(chimechoBoost ? 2 : 1, pokemon, 0, false)
         ally.addAttackSpeed(chimechoBoost ? 10 : 5, pokemon, 0, false)
       }
       if (pokemon.effects.has(Effect.PRESTO)) {

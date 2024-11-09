@@ -13,6 +13,7 @@ import {
   Title,
   Transfer
 } from "../../../types"
+import { EloRank } from "../../../types/Config"
 import { BotDifficulty } from "../../../types/enum/Game"
 import { Item } from "../../../types/enum/Item"
 import { Language } from "../../../types/enum/Language"
@@ -62,13 +63,13 @@ export const networkSlice = createSlice({
     logOut: (state) => {
       state.client = new Client(endpoint)
       state.uid = ""
-      state.preparation?.leave()
+      state.preparation?.connection.isOpen && state.preparation?.leave(true)
       state.preparation = undefined
-      state.lobby?.leave()
+      state.lobby?.connection.isOpen && state.lobby?.leave(true)
       state.lobby = undefined
-      state.game?.leave()
+      state.game?.connection.isOpen && state.game?.leave(true)
       state.game = undefined
-      state.after?.leave()
+      state.after?.connection.isOpen && state.after?.leave(true)
       state.after = undefined
     },
     setProfile: (state, action: PayloadAction<IUserMetadata>) => {
@@ -79,38 +80,38 @@ export const networkSlice = createSlice({
     },
     joinLobby: (state, action: PayloadAction<Room<ICustomLobbyState>>) => {
       state.lobby = action.payload
-      state.preparation?.connection.close()
+      state.preparation?.connection.isOpen && state.preparation?.leave(true)
       state.preparation = undefined
-      state.game?.connection.close()
+      state.game?.connection.close() // still allow to reconnect if left by mistake
       state.game = undefined
-      state.after?.connection.close()
+      state.after?.connection.isOpen && state.after?.leave(true)
       state.after = undefined
     },
     joinPreparation: (state, action: PayloadAction<Room<PreparationState>>) => {
       state.preparation = action.payload
-      state.lobby?.connection.close()
+      state.lobby?.connection.isOpen && state.lobby?.leave(true)
       state.lobby = undefined
-      state.game?.connection.close()
+      state.game?.connection.close() // still allow to reconnect if left by mistake
       state.game = undefined
-      state.after?.connection.close()
+      state.after?.connection.isOpen && state.after?.leave(true)
       state.after = undefined
     },
     joinGame: (state, action: PayloadAction<Room<GameState>>) => {
       Object.assign(state, { game: action.payload })
-      state.preparation?.connection.close()
+      state.preparation?.connection.isOpen && state.preparation?.leave(true)
       state.preparation = undefined
-      state.lobby?.connection.close()
+      state.lobby?.connection.isOpen && state.lobby?.leave(true)
       state.lobby = undefined
-      state.after?.connection.close()
+      state.after?.connection.isOpen && state.after?.leave(true)
       state.after = undefined
     },
     joinAfter: (state, action: PayloadAction<Room<AfterGameState>>) => {
       state.after = action.payload
-      state.game?.connection.close()
+      state.game?.connection.close() // still allow to reconnect if left by mistake
       state.game = undefined
-      state.lobby?.connection.close()
+      state.lobby?.connection.isOpen && state.lobby?.leave(true)
       state.lobby = undefined
-      state.preparation?.connection.close()
+      state.preparation?.connection.isOpen && state.preparation?.leave(true)
       state.preparation = undefined
     },
     sendMessage: (state, action: PayloadAction<string>) => {
@@ -160,7 +161,7 @@ export const networkSlice = createSlice({
     toggleEloRoom: (state, action: PayloadAction<boolean>) => {
       state.preparation?.send(Transfer.TOGGLE_NO_ELO, action.payload)
     },
-    lockClick: (state) => {
+    lockShop: (state) => {
       state.game?.send(Transfer.LOCK)
     },
     levelClick: (state) => {
@@ -185,6 +186,15 @@ export const networkSlice = createSlice({
     },
     changeRoomPassword: (state, action: PayloadAction<string | null>) => {
       state.preparation?.send(Transfer.CHANGE_ROOM_PASSWORD, action.payload)
+    },
+    changeRoomMinMaxRanks: (
+      state,
+      action: PayloadAction<{
+        minRank: EloRank | null
+        maxRank: EloRank | null
+      }>
+    ) => {
+      state.preparation?.send(Transfer.CHANGE_ROOM_RANKS, action.payload)
     },
     changeSelectedEmotion: (
       state,
@@ -241,6 +251,9 @@ export const networkSlice = createSlice({
     ) => {
       state.lobby?.send(Transfer.GIVE_BOOSTER, action.payload)
     },
+    heapSnapshot: (state) => {
+      state.lobby?.send(Transfer.HEAP_SNAPSHOT)
+    },
     giveRole: (state, action: PayloadAction<{ uid: string; role: Role }>) => {
       state.lobby?.send(Transfer.SET_ROLE, action.payload)
     },
@@ -284,6 +297,7 @@ export const networkSlice = createSlice({
 })
 
 export const {
+  heapSnapshot,
   selectLanguage,
   unban,
   deleteBotDatabase,
@@ -304,6 +318,7 @@ export const {
   buyBooster,
   changeRoomName,
   changeRoomPassword,
+  changeRoomMinMaxRanks,
   gameStartRequest,
   logIn,
   logOut,
@@ -323,7 +338,7 @@ export const {
   itemClick,
   shopClick,
   levelClick,
-  lockClick,
+  lockShop,
   searchById,
   setTitle,
   kick,

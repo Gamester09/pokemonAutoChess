@@ -33,9 +33,9 @@ export const RarityCost: { [key in Rarity]: number } = Object.freeze({
   [Rarity.RARE]: 3,
   [Rarity.EPIC]: 4,
   [Rarity.ULTRA]: 5,
-  [Rarity.UNIQUE]: 6,
-  [Rarity.LEGENDARY]: 7,
-  [Rarity.HATCH]: 11
+  [Rarity.HATCH]: 9,
+  [Rarity.UNIQUE]: 10,
+  [Rarity.LEGENDARY]: 20
 })
 
 export const EmotionCost: { [key in Emotion]: number } = {
@@ -91,7 +91,7 @@ export const SynergyTriggers: { [key in Synergy]: number[] } = {
   [Synergy.POISON]: [3, 5, 7],
   [Synergy.DRAGON]: [3, 5, 7],
   [Synergy.FIELD]: [3, 6, 9],
-  [Synergy.MONSTER]: [2, 4, 6],
+  [Synergy.MONSTER]: [2, 4, 6, 9],
   [Synergy.HUMAN]: [2, 4, 6],
   [Synergy.AQUATIC]: [2, 4, 6],
   [Synergy.BUG]: [2, 4, 6, 8],
@@ -112,10 +112,10 @@ export const SynergyTriggers: { [key in Synergy]: number[] } = {
 
 export const RequiredStageLevelForXpElligibility = 10
 
-export const ExpPlace = [700, 500, 400, 300, 200, 150, 100, 50]
+export const ExpPlace = [700, 400, 350, 300, 250, 200, 200, 200]
 
 export const RarityColor: { [key in Rarity]: string } = {
-  [Rarity.COMMON]: "#9f9f9f",
+  [Rarity.COMMON]: "#a0a0a0",
   [Rarity.UNCOMMON]: "#3bc95e",
   [Rarity.RARE]: "#41bfcc",
   [Rarity.EPIC]: "#ca6cee",
@@ -259,10 +259,20 @@ export const UniqueShop = new Array<PkmProposition>(
   Pkm.POIPOLE,
   Pkm.LUVDISC,
   Pkm.AUDINO,
-  Pkm.MANTYKE
+  Pkm.MANTYKE,
+  Pkm.DURANT,
+  Pkm.SKARMORY,
+  Pkm.SIGILYPH,
+  Pkm.OGERPON_TEAL,
+  Pkm.OGERPON_WELLSPRING,
+  Pkm.OGERPON_HEARTHFLAME,
+  Pkm.OGERPON_CORNERSTONE,
+  Pkm.IRON_HANDS,
+  Pkm.TURTONATOR
 )
 
 export const LegendaryShop = new Array<PkmProposition>(
+  Pkm.KYUREM,
   Pkm.RESHIRAM,
   Pkm.ZEKROM,
   Pkm.STAKATAKA,
@@ -300,6 +310,9 @@ export const LegendaryShop = new Array<PkmProposition>(
   Pkm.ZAPDOS,
   Pkm.MOLTRES,
   Pkm.ARTICUNO,
+  Pkm.GALARIAN_ARTICUNO,
+  Pkm.GALARIAN_ZAPDOS,
+  Pkm.GALARIAN_MOLTRES,
   Pkm.SPECTRIER,
   Pkm.KARTANA,
   Pkm.NECROZMA,
@@ -310,7 +323,8 @@ export const LegendaryShop = new Array<PkmProposition>(
   Pkm.THUNDURUS,
   Pkm.LANDORUS,
   Pkm.ENAMORUS,
-  Pkm.MAGEARNA
+  Pkm.MAGEARNA,
+  Pkm.MELMETAL
 )
 
 export const NB_UNIQUE_PROPOSITIONS = 6
@@ -341,20 +355,12 @@ export const FishRarityProbability: {
     [Rarity.UNCOMMON]: 0.25,
     [Rarity.RARE]: 0.25,
     [Rarity.EPIC]: 0.1
-  },
-  [Item.GOLDEN_ROD]: {
-    [Rarity.SPECIAL]: 0.1,
-    [Rarity.COMMON]: 0.2,
-    [Rarity.UNCOMMON]: 0.25,
-    [Rarity.RARE]: 0.25,
-    [Rarity.EPIC]: 0.15,
-    [Rarity.ULTRA]: 0.05
   }
 }
 
 export const MAX_POOL_CONNECTIONS_SIZE = 16
-export const MAX_CONCURRENT_PLAYERS_ON_SERVER = 700
-export const MAX_CONCURRENT_PLAYERS_ON_LOBBY = 50
+export const MAX_CONCURRENT_PLAYERS_ON_SERVER = 1000
+export const MAX_CONCURRENT_PLAYERS_ON_LOBBY = 100
 export const MAX_PLAYERS_PER_GAME = 8
 export const MIN_HUMAN_PLAYERS = process.env.MIN_HUMAN_PLAYERS
   ? parseInt(process.env.MIN_HUMAN_PLAYERS)
@@ -400,13 +406,14 @@ export const WeatherThreshold: { [weather in Weather]: number } = {
   [Weather.MISTY]: 8,
   [Weather.NEUTRAL]: 8,
   [Weather.NIGHT]: 8,
-  [Weather.BLOODMOON]: 9,
+  [Weather.BLOODMOON]: 8,
   [Weather.RAIN]: 8,
   [Weather.SANDSTORM]: 8,
-  [Weather.SNOW]: 6,
-  [Weather.STORM]: 6,
+  [Weather.SNOW]: 8,
+  [Weather.STORM]: 8,
   [Weather.SUN]: 8,
-  [Weather.WINDY]: 8
+  [Weather.WINDY]: 8,
+  [Weather.SMOG]: 8
 }
 
 // 4  A  1
@@ -596,7 +603,7 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
   [Item.POKEMONOMICON]: { [Stat.AP]: 10, [Stat.SHIELD]: 15 },
   [Item.POWER_LENS]: { [Stat.AP]: 10, [Stat.SPE_DEF]: 5 },
   [Item.SHELL_BELL]: { [Stat.AP]: 10, [Stat.ATK]: 3 },
-  [Item.LUCKY_EGG]: { [Stat.AP]: 10, [Stat.DEF]: 2 },
+  [Item.LUCKY_EGG]: { [Stat.AP]: 60, [Stat.DEF]: 6, [Stat.LUCK]: 50 },
   [Item.AQUA_EGG]: { [Stat.PP]: 50 },
   [Item.BLUE_ORB]: { [Stat.PP]: 15, [Stat.ATK_SPEED]: 10 },
   [Item.SCOPE_LENS]: { [Stat.PP]: 15, [Stat.CRIT_CHANCE]: 25 },
@@ -612,7 +619,7 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
   },
   [Item.GRACIDEA_FLOWER]: { [Stat.ATK_SPEED]: 10, [Stat.SHIELD]: 15 },
   [Item.CHOICE_SCARF]: { [Stat.ATK_SPEED]: 10, [Stat.SPE_DEF]: 2 },
-  [Item.FIRE_GEM]: { [Stat.ATK_SPEED]: 10, [Stat.ATK]: 3 },
+  [Item.PUNCHING_GLOVE]: { [Stat.ATK_SPEED]: 10, [Stat.ATK]: 3 },
   [Item.DEFENSIVE_RIBBON]: { [Stat.ATK_SPEED]: 10, [Stat.DEF]: 2 },
   [Item.WONDER_BOX]: { [Stat.CRIT_CHANCE]: 10 },
   [Item.CLEANSE_TAG]: { [Stat.CRIT_CHANCE]: 10, [Stat.SHIELD]: 15 },
@@ -621,13 +628,13 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
   [Item.FLUFFY_TAIL]: { [Stat.CRIT_CHANCE]: 10, [Stat.DEF]: 2 },
   [Item.KINGS_ROCK]: { [Stat.SHIELD]: 100 },
   [Item.SHINY_CHARM]: { [Stat.SHIELD]: 15, [Stat.SPE_DEF]: 2 },
-  [Item.SOOTHE_BELL]: { [Stat.SHIELD]: 15, [Stat.ATK]: 3 },
-  [Item.FLAME_ORB]: { [Stat.SHIELD]: 30, [Stat.DEF]: 2 },
+  [Item.PROTECTIVE_PADS]: { [Stat.SHIELD]: 60, [Stat.ATK]: 6 },
+  [Item.MAX_REVIVE]: { [Stat.SHIELD]: 15, [Stat.DEF]: 2 },
   [Item.ASSAULT_VEST]: { [Stat.SPE_DEF]: 20 },
   [Item.AMULET_COIN]: { [Stat.SPE_DEF]: 2, [Stat.ATK]: 3 },
   [Item.POKE_DOLL]: { [Stat.SPE_DEF]: 2, [Stat.DEF]: 2 },
   [Item.RED_ORB]: { [Stat.ATK]: 10 },
-  [Item.MAX_REVIVE]: { [Stat.ATK]: 3, [Stat.DEF]: 2 },
+  [Item.FLAME_ORB]: { [Stat.ATK]: 5, [Stat.DEF]: 2 },
   [Item.ROCKY_HELMET]: { [Stat.DEF]: 12 },
   [Item.AGUAV_BERRY]: {},
   [Item.APICOT_BERRY]: {},
@@ -650,7 +657,7 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
   [Item.SALAC_BERRY]: {},
   [Item.SITRUS_BERRY]: {},
   [Item.COMFEY]: {},
-  [Item.ELECTIRIZER]: { [Stat.ATK_SPEED]: 50 },
+  [Item.ELECTIRIZER]: { [Stat.ATK_SPEED]: 30 },
   [Item.MAGMARIZER]: { [Stat.ATK]: 5 },
   [Item.MACHO_BRACE]: { [Stat.ATK]: 15, [Stat.ATK_SPEED]: -15 },
   [Item.LIGHT_BALL]: { [Stat.AP]: 75 },
@@ -673,7 +680,6 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
   [Item.OLD_ROD]: {},
   [Item.GOOD_ROD]: {},
   [Item.SUPER_ROD]: {},
-  [Item.GOLDEN_ROD]: {},
   [Item.RARE_CANDY]: {},
   [Item.EVIOLITE]: {
     [Stat.HP]: 100,
@@ -682,19 +688,33 @@ export const ItemStats: Record<Item, { [stat in Stat]?: number }> = {
     [Stat.DEF]: 5,
     [Stat.SPE_DEF]: 5
   },
-  [Item.GOLD_BOTTLE_CAP]: { [Stat.CRIT_CHANCE]: 20, [Stat.CRIT_POWER]: 0.4 },
+  [Item.GOLD_BOTTLE_CAP]: {
+    [Stat.LUCK]: 50
+  },
   [Item.SACRED_ASH]: {},
   [Item.COMET_SHARD]: { [Stat.ATK]: 12 },
   [Item.ABSORB_BULB]: { [Stat.DEF]: 8, [Stat.SPE_DEF]: 8 },
   [Item.WHITE_FLUTE]: {},
+  [Item.REPEAT_BALL]: {},
   [Item.DAMP_ROCK]: {},
   [Item.ICY_ROCK]: {},
   [Item.HEAT_ROCK]: {},
   [Item.SMOOTH_ROCK]: {},
   [Item.BLACK_AUGURITE]: {},
+  [Item.MIST_STONE]: {},
+  [Item.ELECTRIC_QUARTZ]: {},
+  [Item.BLOOD_STONE]: {},
+  [Item.FLOAT_STONE]: {},
+  [Item.SMELLY_CLAY]: {},
   [Item.POKERUS_VIAL]: {},
   [Item.ROTOM_PHONE]: {},
-  [Item.FIRE_SHARD]: {}
+  [Item.SILK_SCARF]: {},
+  [Item.TINY_MUSHROOM]: {},
+  [Item.FIRE_SHARD]: {},
+  [Item.TEAL_MASK]: { [Stat.SHIELD]: 50 },
+  [Item.WELLSPRING_MASK]: { [Stat.SHIELD]: 50 },
+  [Item.CORNERSTONE_MASK]: { [Stat.SHIELD]: 50 },
+  [Item.HEARTHFLAME_MASK]: { [Stat.SHIELD]: 50 }
 }
 
 export type TilesetExchangeFile = {
@@ -749,5 +769,7 @@ export const MAX_SIMULATION_DELTA_TIME = 50 // milliseconds
 export const CRON_ELO_DECAY_DELAY = 86400 * 1000 * 10 // 10 days
 export const CRON_ELO_DECAY_MINIMUM_ELO = 1100
 export const CRON_HISTORY_CLEANUP_DELAY = 86400 * 1000 * 30 // 30 days
+
+export const BOTS_ENABLED = false
 
 export { EloRank }

@@ -10,6 +10,7 @@ import {
   giveBooster,
   giveRole,
   giveTitle,
+  heapSnapshot,
   searchName,
   unban
 } from "../../../stores/NetworkStore"
@@ -49,7 +50,9 @@ export default function Profile() {
   return (
     <div className="profile-modal">
       <div className="profile-box">
-        <h2>{profile?.displayName ?? ""} {t("profile")}</h2>
+        <h2>
+          {profile?.displayName ?? ""} {t("profile")}
+        </h2>
         {profile && <PlayerBox user={profile} history={gameHistory} />}
       </div>
 
@@ -117,8 +120,19 @@ function OtherProfileActions({ resetSearch }) {
             })
           )
         }}
+      >{t("give_boosters")}
+      </button>
+    ) : null
+
+  const heapSnapshotButton =
+    user && role && role === Role.ADMIN ? (
+      <button
+        className="bubbly red"
+        onClick={() => {
+          dispatch(heapSnapshot())
+        }}
       >
-        <p style={{ margin: "0px" }}>{t("give_boosters")}</p>
+        {t("heap_snapshot")}
       </button>
     ) : null
 
@@ -131,7 +145,7 @@ function OtherProfileActions({ resetSearch }) {
           dispatch(ban({ uid: user.uid, reason: reason ? reason : "" }))
         }}
       >
-        <p style={{ margin: "0px" }}>{t("ban_user")}</p>
+        {t("ban_user")}
       </button>
     ) : null
 
@@ -143,7 +157,7 @@ function OtherProfileActions({ resetSearch }) {
           dispatch(unban({ uid: user.uid, name: user.displayName }))
         }}
       >
-        <p style={{ margin: "0px" }}>{t("unban_user")}</p>
+        {t("unban_user")}
       </button>
     ) : null
 
@@ -204,6 +218,7 @@ function OtherProfileActions({ resetSearch }) {
   return role === Role.ADMIN || role === Role.MODERATOR ? (
     <>
       {giveButton}
+      {heapSnapshotButton}
       {roleButton}
       {titleButton}
       {banButton}

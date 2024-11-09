@@ -2,18 +2,20 @@ import { Passive } from "../types/enum/Passive"
 import {
   Weather,
   WeatherAssociatedToSynergy,
-  WeatherPassives
+  PassivesAssociatedToWeather
 } from "../types/enum/Weather"
 
-import { SynergyGivenByItem, WeatherRocks } from "../types/enum/Item"
+import { SynergyGivenByItem, WeatherByWeatherRocks } from "../types/enum/Item"
 import { MapSchema } from "@colyseus/schema"
 import { Pokemon } from "../models/colyseus-models/pokemon"
 import { WeatherThreshold } from "../types/Config"
-import { Synergy } from "../types/enum/Synergy"
+import Player from "../models/colyseus-models/player"
+import { values } from "../utils/schemas"
 
 export function getWeather(
-  playerBoard: MapSchema<Pokemon, string>,
-  opponentBoard: MapSchema<Pokemon, string>
+  bluePlayer: Player,
+  redPlayer: Player | null,
+  redPlayerBoard: MapSchema<Pokemon, string>
 ): Weather {
   function getDominantWeather(
     count: Map<Weather, number>,
@@ -31,22 +33,49 @@ export function getWeather(
   }
 
   const boardWeatherScore = new Map<Weather, number>()
-  ;[playerBoard, opponentBoard].forEach((board) => {
+
+  // weather rocks
+  for (const player of [bluePlayer, redPlayer]) {
+    if (player === null) continue
+    player.items.forEach((item) => {
+      if (WeatherByWeatherRocks.has(item)) {
+        const weatherBoosted = WeatherByWeatherRocks.get(item)!
+        boardWeatherScore.set(
+          weatherBoosted,
+          (boardWeatherScore.get(weatherBoosted) ?? 0) + 3
+        )
+      }
+    })
+  }
+
+  for (const board of [bluePlayer.board, redPlayerBoard]) {
     const playerWeatherScore = new Map<Weather, number>()
     board.forEach((pkm) => {
       if (pkm.positionY != 0) {
-        if (WeatherPassives.has(pkm.passive)) {
-          const weather = WeatherPassives.get(pkm.passive)!
-          boardWeatherScore.set(
-            weather,
-            (boardWeatherScore.get(weather) ?? 0) + 100
+        if (pkm.passive) {
+          const weather = [...PassivesAssociatedToWeather.keys()].find((key) =>
+            PassivesAssociatedToWeather.get(key)!.includes(pkm.passive)
           )
-          playerWeatherScore.set(
-            weather,
-            (playerWeatherScore.get(weather) ?? 0) + 100
-          )
+          if (weather) {
+            boardWeatherScore.set(
+              weather,
+              (boardWeatherScore.get(weather) ?? 0) + 100
+            )
+            playerWeatherScore.set(
+              weather,
+              (playerWeatherScore.get(weather) ?? 0) + 100
+            )
+          }
         }
-        pkm.types.forEach((type) => {
+
+        const types = [
+          ...values(pkm.types),
+          ...values(pkm.items)
+            .filter((item) => item in SynergyGivenByItem)
+            .map((item) => SynergyGivenByItem[item])
+        ]
+
+        types.forEach((type) => {
           if (WeatherAssociatedToSynergy.has(type)) {
             const weather = WeatherAssociatedToSynergy.get(type)!
             boardWeatherScore.set(
@@ -54,19 +83,6 @@ export function getWeather(
               (boardWeatherScore.get(weather) ?? 0) + 1
             )
 
-            // add weather boosts for weather rocks
-            pkm.items.forEach((item) => {
-              if (
-                WeatherRocks.includes(item) &&
-                SynergyGivenByItem[item] === type
-              ){
-                boardWeatherScore.set(
-                  weather,
-                  (boardWeatherScore.get(weather) ?? 0) + 2
-                )
-              }
-            })
-                
             if (
               pkm.passive === Passive.SAND_STREAM &&
               weather === Weather.SANDSTORM
@@ -130,9 +146,57 @@ export function getWeather(
             )
           }
         }
+
+        if (pkm.passive === Passive.TORNADUS) {
+          const dominant =
+            getDominantWeather(playerWeatherScore, [
+              Weather.WINDY,
+              Weather.SNOW
+            ]) ?? Weather.WINDY
+          boardWeatherScore.set(
+            dominant,
+            (boardWeatherScore.get(dominant) ?? 0) + 100
+          )
+        }
+
+        if (pkm.passive === Passive.THUNDURUS) {
+          const dominant =
+            getDominantWeather(playerWeatherScore, [
+              Weather.WINDY,
+              Weather.STORM
+            ]) ?? Weather.STORM
+          boardWeatherScore.set(
+            dominant,
+            (boardWeatherScore.get(dominant) ?? 0) + 100
+          )
+        }
+
+        if (pkm.passive === Passive.LANDORUS) {
+          const dominant =
+            getDominantWeather(playerWeatherScore, [
+              Weather.WINDY,
+              Weather.SANDSTORM
+            ]) ?? Weather.SANDSTORM
+          boardWeatherScore.set(
+            dominant,
+            (boardWeatherScore.get(dominant) ?? 0) + 100
+          )
+        }
+
+        if (pkm.passive === Passive.ENAMORUS) {
+          const dominant =
+            getDominantWeather(playerWeatherScore, [
+              Weather.WINDY,
+              Weather.MISTY
+            ]) ?? Weather.MISTY
+          boardWeatherScore.set(
+            dominant,
+            (boardWeatherScore.get(dominant) ?? 0) + 100
+          )
+        }
       }
     })
-  })
+  }
 
   //logger.debug("boardWeatherScore", boardWeatherScore)
   const dominantWeather = getDominantWeather(boardWeatherScore)

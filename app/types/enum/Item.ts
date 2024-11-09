@@ -1,4 +1,6 @@
+import { reverseMap } from "../../utils/map"
 import { Synergy } from "./Synergy"
+import { Weather } from "./Weather"
 
 export enum Item {
   FOSSIL_STONE = "FOSSIL_STONE",
@@ -36,9 +38,9 @@ export enum Item {
   SMOKE_BALL = "SMOKE_BALL",
   XRAY_VISION = "XRAY_VISION",
   RAZOR_FANG = "RAZOR_FANG",
-  SOOTHE_BELL = "SOOTHE_BELL",
+  PROTECTIVE_PADS = "PROTECTIVE_PADS",
   CHOICE_SCARF = "CHOICE_SCARF",
-  FIRE_GEM = "FIRE_GEM",
+  PUNCHING_GLOVE = "PUNCHING_GLOVE",
   DEFENSIVE_RIBBON = "DEFENSIVE_RIBBON",
   WONDER_BOX = "WONDER_BOX",
   CLEANSE_TAG = "CLEANSE_TAG",
@@ -90,6 +92,8 @@ export enum Item {
   EXP_SHARE = "EXP_SHARE",
   POKERUS_VIAL = "POKERUS_VIAL",
   ROTOM_PHONE = "ROTOM_PHONE",
+  SILK_SCARF = "SILK_SCARF",
+  TINY_MUSHROOM = "TINY_MUSHROOM",
   METEORITE = "METEORITE",
   BERRY_JUICE = "BERRY_JUICE",
   TRASH = "TRASH",
@@ -98,7 +102,6 @@ export enum Item {
   OLD_ROD = "OLD_ROD",
   GOOD_ROD = "GOOD_ROD",
   SUPER_ROD = "SUPER_ROD",
-  GOLDEN_ROD = "GOLDEN_ROD",
   RARE_CANDY = "RARE_CANDY",
   EVIOLITE = "EVIOLITE",
   WHITE_FLUTE = "WHITE_FLUTE",
@@ -106,12 +109,22 @@ export enum Item {
   ABSORB_BULB = "ABSORB_BULB",
   SACRED_ASH = "SACRED_ASH",
   COMET_SHARD = "COMET_SHARD",
+  REPEAT_BALL = "REPEAT_BALL",
   DAMP_ROCK = "DAMP_ROCK",
   ICY_ROCK = "ICY_ROCK",
   HEAT_ROCK = "HEAT_ROCK",
   SMOOTH_ROCK = "SMOOTH_ROCK",
   BLACK_AUGURITE = "BLACK_AUGURITE",
-  FIRE_SHARD = "FIRE_SHARD"
+  FLOAT_STONE = "FLOAT_STONE",
+  MIST_STONE = "MIST_STONE",
+  ELECTRIC_QUARTZ = "ELECTRIC_QUARTZ",
+  BLOOD_STONE = "BLOOD_STONE",
+  SMELLY_CLAY = "SMELLY_CLAY",
+  FIRE_SHARD = "FIRE_SHARD",
+  TEAL_MASK = "TEAL_MASK",
+  WELLSPRING_MASK = "WELLSPRING_MASK",
+  CORNERSTONE_MASK = "CORNERSTONE_MASK",
+  HEARTHFLAME_MASK = "HEARTHFLAME_MASK"
 }
 
 export const AllItems: Item[] = Object.values(Item)
@@ -120,6 +133,10 @@ export const AllItems: Item[] = Object.values(Item)
 export const SpecialItems: Item[] = [
   Item.COMFEY,
   Item.METEORITE,
+  Item.TEAL_MASK,
+  Item.WELLSPRING_MASK,
+  Item.CORNERSTONE_MASK,
+  Item.HEARTHFLAME_MASK,
   Item.BERRY_JUICE,
   Item.FIRE_SHARD,
   Item.OLD_ROD,
@@ -129,7 +146,6 @@ export const SpecialItems: Item[] = [
 ]
 
 export const FishingRods = [
-  Item.GOLDEN_ROD,
   Item.SUPER_ROD,
   Item.GOOD_ROD,
   Item.OLD_ROD
@@ -178,7 +194,7 @@ export const ItemRecipe: { [key in Item]?: Item[] } = {
   [Item.RAZOR_FANG]: [Item.MAGNET, Item.BLACK_GLASSES],
   [Item.GRACIDEA_FLOWER]: [Item.MAGNET, Item.MIRACLE_SEED],
   [Item.CHOICE_SCARF]: [Item.MAGNET, Item.NEVER_MELT_ICE],
-  [Item.FIRE_GEM]: [Item.MAGNET, Item.CHARCOAL],
+  [Item.PUNCHING_GLOVE]: [Item.MAGNET, Item.CHARCOAL],
   [Item.DEFENSIVE_RIBBON]: [Item.MAGNET, Item.HEART_SCALE],
   [Item.WONDER_BOX]: [Item.BLACK_GLASSES, Item.BLACK_GLASSES],
   [Item.CLEANSE_TAG]: [Item.BLACK_GLASSES, Item.MIRACLE_SEED],
@@ -187,13 +203,13 @@ export const ItemRecipe: { [key in Item]?: Item[] } = {
   [Item.FLUFFY_TAIL]: [Item.BLACK_GLASSES, Item.HEART_SCALE],
   [Item.KINGS_ROCK]: [Item.MIRACLE_SEED, Item.MIRACLE_SEED],
   [Item.SHINY_CHARM]: [Item.MIRACLE_SEED, Item.NEVER_MELT_ICE],
-  [Item.SOOTHE_BELL]: [Item.MIRACLE_SEED, Item.CHARCOAL],
-  [Item.FLAME_ORB]: [Item.MIRACLE_SEED, Item.HEART_SCALE],
+  [Item.PROTECTIVE_PADS]: [Item.MIRACLE_SEED, Item.CHARCOAL],
+  [Item.MAX_REVIVE]: [Item.MIRACLE_SEED, Item.HEART_SCALE],
   [Item.ASSAULT_VEST]: [Item.NEVER_MELT_ICE, Item.NEVER_MELT_ICE],
   [Item.AMULET_COIN]: [Item.NEVER_MELT_ICE, Item.CHARCOAL],
   [Item.POKE_DOLL]: [Item.NEVER_MELT_ICE, Item.HEART_SCALE],
   [Item.RED_ORB]: [Item.CHARCOAL, Item.CHARCOAL],
-  [Item.MAX_REVIVE]: [Item.CHARCOAL, Item.HEART_SCALE],
+  [Item.FLAME_ORB]: [Item.CHARCOAL, Item.HEART_SCALE],
   [Item.ROCKY_HELMET]: [Item.HEART_SCALE, Item.HEART_SCALE]
 }
 
@@ -221,9 +237,9 @@ export const Berries: Item[] = [
 ]
 
 export const ArtificialItems: Item[] = [
+  Item.EXP_SHARE,
   Item.ELECTIRIZER,
   Item.MAGMARIZER,
-  Item.EXP_SHARE,
   Item.LIGHT_BALL,
   Item.TOXIC_ORB,
   Item.HARD_STONE,
@@ -234,20 +250,22 @@ export const ArtificialItems: Item[] = [
   Item.METRONOME,
   Item.BIG_NUGGET,
   Item.POKERUS_VIAL,
-  Item.ROTOM_PHONE
+  Item.ROTOM_PHONE,
+  Item.SILK_SCARF,
+  Item.TINY_MUSHROOM
 ]
 
 export const ShinyItems: Item[] = [
   Item.DYNAMAX_BAND,
   Item.SHINY_STONE,
-  Item.GOLDEN_ROD,
   Item.RARE_CANDY,
   Item.EVIOLITE,
   Item.WHITE_FLUTE,
   Item.GOLD_BOTTLE_CAP,
   Item.ABSORB_BULB,
   Item.SACRED_ASH,
-  Item.COMET_SHARD
+  Item.COMET_SHARD,
+  Item.REPEAT_BALL
 ]
 
 export const WeatherRocks: Item[] = [
@@ -255,8 +273,32 @@ export const WeatherRocks: Item[] = [
   Item.ICY_ROCK,
   Item.HEAT_ROCK,
   Item.SMOOTH_ROCK,
-  Item.BLACK_AUGURITE
+  Item.BLACK_AUGURITE,
+  Item.FLOAT_STONE,
+  Item.ELECTRIC_QUARTZ,
+  Item.MIST_STONE,
+  Item.BLOOD_STONE,
+  Item.SMELLY_CLAY
 ]
+
+export const WeatherRocksByWeather: Map<
+  Weather,
+  (typeof WeatherRocks)[number] | null
+> = new Map([
+  [Weather.SUN, Item.HEAT_ROCK],
+  [Weather.RAIN, Item.DAMP_ROCK],
+  [Weather.SANDSTORM, Item.SMOOTH_ROCK],
+  [Weather.SNOW, Item.ICY_ROCK],
+  [Weather.STORM, Item.ELECTRIC_QUARTZ],
+  [Weather.MISTY, Item.MIST_STONE],
+  [Weather.WINDY, Item.FLOAT_STONE],
+  [Weather.SMOG, Item.SMELLY_CLAY],
+  [Weather.NIGHT, Item.BLACK_AUGURITE],
+  [Weather.BLOODMOON, Item.BLOOD_STONE],
+  [Weather.NEUTRAL, null]
+])
+
+export const WeatherByWeatherRocks = reverseMap(WeatherRocksByWeather)
 
 export const CraftableItems: Item[] = Object.keys(ItemRecipe) as Item[]
 
@@ -292,11 +334,8 @@ export const SynergyItems = [
   Item.BIG_NUGGET,
   Item.ROTOM_PHONE,
   Item.SHINY_STONE,
-  Item.DAMP_ROCK,
-  Item.ICY_ROCK,
-  Item.HEAT_ROCK,
-  Item.SMOOTH_ROCK,
-  Item.BLACK_AUGURITE
+  Item.SILK_SCARF,
+  Item.TINY_MUSHROOM
 ] as const
 
 export const SynergyGivenByItem: Record<
@@ -322,11 +361,8 @@ export const SynergyGivenByItem: Record<
   [Item.BIG_NUGGET]: Synergy.GROUND,
   [Item.ROTOM_PHONE]: Synergy.GHOST,
   [Item.SHINY_STONE]: Synergy.LIGHT,
-  [Item.DAMP_ROCK]: Synergy.WATER,
-  [Item.ICY_ROCK]: Synergy.ICE,
-  [Item.HEAT_ROCK]: Synergy.FIRE,
-  [Item.SMOOTH_ROCK]: Synergy.GROUND,
-  [Item.BLACK_AUGURITE]: Synergy.DARK
+  [Item.SILK_SCARF]: Synergy.NORMAL,
+  [Item.TINY_MUSHROOM]: Synergy.BUG
 }
 
 export const NonSpecialItemComponents: Item[] = [
@@ -338,4 +374,18 @@ export const NonSpecialItemComponents: Item[] = [
   Item.NEVER_MELT_ICE,
   Item.HEART_SCALE,
   Item.MYSTIC_WATER
+]
+
+export const NonHoldableItems: Item[] = [
+  ...WeatherRocks,
+  ...FishingRods,
+  Item.METEORITE,
+  Item.FIRE_SHARD
+]
+
+export const OgerponMasks: Item[] = [
+  Item.TEAL_MASK,
+  Item.WELLSPRING_MASK,
+  Item.CORNERSTONE_MASK,
+  Item.HEARTHFLAME_MASK
 ]

@@ -1,7 +1,7 @@
 import { Client, Room } from "colyseus.js"
 import { type NonFunctionPropNames } from "@colyseus/schema/lib/types/HelperTypes"
 import firebase from "firebase/compat/app"
-import React, { useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { GameUser } from "../../../models/colyseus-models/game-user"
@@ -21,7 +21,7 @@ import {
 import {
   addUser,
   changeUser,
-  leavePreparation,
+  resetPreparation,
   pushMessage,
   removeMessage,
   removeUser,
@@ -34,7 +34,9 @@ import {
   setPassword,
   setUser,
   setWhiteList,
-  setBlackList
+  setBlackList,
+  setMinRank,
+  setMaxRank
 } from "../stores/PreparationStore"
 import Chat from "./component/chat/chat"
 import { MainSidebar } from "./component/main-sidebar/main-sidebar"
@@ -77,10 +79,15 @@ export default function Preparation() {
                   r = await client.reconnect(
                     cachedReconnectionToken
                   )
+                  if (r.name !== "preparation") {
+                    throw new Error(
+                      `Expected to join a preparation room but joined ${r.name} instead`
+                    )
+                  }
                 } catch (error) {
-                  logger.log(error)
+                  logger.error(error)
                   localStore.delete(LocalStoreKeys.RECONNECTION_PREPARATION)
-                  dispatch(leavePreparation())
+                  dispatch(resetPreparation())
                   navigate("/lobby")
                   return
                 }
@@ -91,6 +98,8 @@ export default function Preparation() {
                 )
                 await initialize(r, user.uid)
                 dispatch(joinPreparation(r))
+              } else {
+                navigate("/lobby")
               }
             }
           } catch (error) {
@@ -132,6 +141,14 @@ export default function Preparation() {
 
       r.state.listen("noElo", (value, previousValue) => {
         dispatch(setNoELO(value))
+      })
+
+      r.state.listen("minRank", (value, previousValue) => {
+        dispatch(setMinRank(value))
+      })
+
+      r.state.listen("maxRank", (value, previousValue) => {
+        dispatch(setMaxRank(value))
       })
 
       r.state.listen("whitelist", (value, previousValue) => {
@@ -194,16 +211,8 @@ export default function Preparation() {
         const shouldGoToLobby = (code === CloseCodes.USER_KICKED || code === CloseCodes.ROOM_DELETED || code === CloseCodes.ROOM_FULL || code === CloseCodes.ROOM_EMPTY || code === CloseCodes.USER_BANNED || code === CloseCodes.USER_RANK_TOO_LOW)
         const shouldReconnect = code === CloseCodes.ABNORMAL_CLOSURE || code === CloseCodes.TIMEOUT
         logger.info(`left preparation room with code ${code}`, { shouldGoToLobby, shouldReconnect })
-        if (shouldGoToLobby) {
-          const errorMessage = CloseCodesMessages[code]
-          if (errorMessage) {
-            dispatch(setErrorAlertMessage(t(`errors.${errorMessage}`)))
-          }
-          localStore.delete(LocalStoreKeys.RECONNECTION_PREPARATION)
-          dispatch(leavePreparation())
-          navigate("/lobby")
-          playSound(SOUNDS.LEAVE_ROOM)
-        } else if (shouldReconnect) {
+
+        if (shouldReconnect) {
           logger.log("Connection closed unexpectedly or timed out. Attempting reconnect.")
           // Restart the expiry timer of the reconnection token for reconnect
           localStore.set(
@@ -212,9 +221,20 @@ export default function Preparation() {
             30
           )
           // clearing state variables to re-initialize
-          dispatch(leavePreparation())
+          dispatch(resetPreparation())
           initialized.current = false
           reconnect()
+        } else {
+          localStore.delete(LocalStoreKeys.RECONNECTION_PREPARATION)
+          dispatch(resetPreparation())
+          if (shouldGoToLobby) {
+            const errorMessage = CloseCodesMessages[code]
+            if (errorMessage) {
+              dispatch(setErrorAlertMessage(t(`errors.${errorMessage}`)))
+            }
+            navigate("/lobby")
+            playSound(SOUNDS.LEAVE_ROOM)
+          }
         }
       })
 
@@ -235,7 +255,7 @@ export default function Preparation() {
             r.connection.isOpen && r.leave(),
             game.connection.isOpen && game.leave(false)
           ])
-          dispatch(leavePreparation())
+          dispatch(resetPreparation())
           navigate("/game")
         }
       })
@@ -248,22 +268,24 @@ export default function Preparation() {
     if (!initialized.current) {
       reconnect()
     }
-  })
+  }, [initialized])
+
+  const leavePreparationRoom = useCallback(async () => {
+    if (room?.connection.isOpen) {
+      await room.leave(true)
+    }
+    localStore.delete(LocalStoreKeys.RECONNECTION_PREPARATION)
+    dispatch(resetPreparation())
+    navigate("/lobby")
+    playSound(SOUNDS.LEAVE_ROOM)
+  }, [room])
 
   return (
     <div className="preparation-page">
       <MainSidebar
         page="preparation"
         leaveLabel={t("leave_room")}
-        leave={async () => {
-          if (room?.connection.isOpen) {
-            await room.leave(true)
-          }
-          localStore.delete(LocalStoreKeys.RECONNECTION_PREPARATION)
-          dispatch(leavePreparation())
-          navigate("/lobby")
-          playSound(SOUNDS.LEAVE_ROOM)
-        }}
+        leave={leavePreparationRoom}
       />
       <main>
         <PreparationMenu />

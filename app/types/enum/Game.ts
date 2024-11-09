@@ -11,7 +11,7 @@ export enum Rarity {
 }
 
 export enum GameMode {
-  NORMAL = "NORMAL",
+  CUSTOM_LOBBY = "CUSTOM_LOBBY",
   QUICKPLAY = "QUICKPLAY",
   RANKED = "RANKED",
   SCRIBBLE = "SCRIBBLE",
@@ -104,7 +104,8 @@ export enum Stat {
   CRIT_CHANCE = "CRIT_CHANCE",
   CRIT_POWER = "CRIT_POWER",
   AP = "AP",
-  SHIELD = "SHIELD"
+  SHIELD = "SHIELD",
+  LUCK = "LUCK"
 }
 
 export enum Damage {
@@ -114,16 +115,6 @@ export enum Damage {
 }
 
 export enum Team {
-  BLUE_TEAM,
-  RED_TEAM
-}
-
-export enum BoardEvent {
-  LIGHTNING = "LIGHTNING",
-  GAS = "GAS",
-  POISON_GAS = "POISON_GAS",
-  STEALTH_ROCKS = "STEALTH_ROCKS",
-  SPIKES = "SPIKES",
-  STICKY_WEB = "STICKY_WEB",
-  HAIL = "HAIL"
+  BLUE_TEAM = 0,
+  RED_TEAM = 1
 }

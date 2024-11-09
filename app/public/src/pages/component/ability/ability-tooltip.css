@@ -17,10 +17,10 @@
 .description-icon > img,
 img.description-icon {
   display: inline-block;
-  vertical-align: -0.5em;
   width: 1.5em;
   height: 1.5em;
   margin-right: 3px;
+  vertical-align: bottom;
 }
 
 h2 .description-icon > img {
@@ -41,6 +41,7 @@ h2 .description-icon > img {
 
 .ability-value {
   color: rgb(171, 171, 171);
+  font-weight: 500;
 }
 
 .ability-value .active {
@@ -55,15 +56,26 @@ h2 .description-icon > img {
   color: #d172ff;
 }
 
+.scales-luck .ability-value {
+  color: #07c552;
+}
+
+.scales-luck .ability-value .active {
+  color: #2aed72;
+}
+
 .stat-label {
   color: rgb(171, 171, 171);
   white-space: normal;
+  font-weight: 500;
 }
 
 .status-label {
   color: rgb(210, 190, 150);
+  font-weight: 500;
 }
 
 .item-label {
   color: rgb(190, 190, 190);
+  font-weight: 500;
 }

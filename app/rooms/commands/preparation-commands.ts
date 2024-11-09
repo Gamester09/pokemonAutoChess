@@ -5,8 +5,9 @@ import { FilterQuery } from "mongoose"
 import { GameUser, IGameUser } from "../../models/colyseus-models/game-user"
 import { BotV2, IBot } from "../../models/mongo-models/bot-v2"
 import UserMetadata from "../../models/mongo-models/user-metadata"
-import { Role, Transfer } from "../../types"
+import { Role } from "../../types"
 import {
+  EloRank,
   EloRankThreshold,
   MAX_PLAYERS_PER_GAME,
   MIN_HUMAN_PLAYERS
@@ -19,6 +20,7 @@ import { pickRandomIn } from "../../utils/random"
 import { entries, values } from "../../utils/schemas"
 import PreparationRoom from "../preparation-room"
 import { CloseCodes } from "../../types/enum/CloseCodes"
+import { getRank } from "../../utils/elo"
 
 export class OnJoinCommand extends Command<
   PreparationRoom,
@@ -37,7 +39,10 @@ export class OnJoinCommand extends Command<
         client.leave(CloseCodes.ROOM_FULL)
         return
       }
-      if (this.state.ownerId == "" && this.state.gameMode === GameMode.NORMAL) {
+      if (
+        this.state.ownerId == "" &&
+        this.state.gameMode === GameMode.CUSTOM_LOBBY
+      ) {
         this.state.ownerId = auth.uid
       }
       if (this.state.users.has(auth.uid)) {
@@ -67,6 +72,16 @@ export class OnJoinCommand extends Command<
             return
           }
 
+          if (
+            this.state.maxRank != null &&
+            u.elo &&
+            EloRankThreshold[getRank(u.elo)] >
+              EloRankThreshold[this.state.maxRank]
+          ) {
+            client.leave(CloseCodes.USER_RANK_TOO_HIGH)
+            return
+          }
+
           this.state.users.set(
             client.auth.uid,
             new GameUser(
@@ -91,7 +106,7 @@ export class OnJoinCommand extends Command<
             })
           }
 
-          if (this.state.gameMode !== GameMode.NORMAL) {
+          if (this.state.gameMode !== GameMode.CUSTOM_LOBBY) {
             this.clock.setTimeout(() => {
               if (
                 this.state.users.has(u.uid) &&
@@ -161,7 +176,7 @@ export class OnGameStartRequestCommand extends Command<
       if (nbHumanPlayers < MIN_HUMAN_PLAYERS && process.env.MODE !== "dev") {
         this.state.addMessage({
           authorId: "Server",
-          payload: `Due to the current high traffic on the game, to limit the resources used server side, only games with a minimum of 8 players are authorized.`,
+          payload: `Due to the current high traffic on the game, to limit the resources used server side, only games with a minimum of ${MIN_HUMAN_PLAYERS} players are authorized.`,
           avatar: "0054/Surprised"
         })
         return
@@ -176,7 +191,7 @@ export class OnGameStartRequestCommand extends Command<
         return
       }
 
-      if (!allUsersReady && this.state.gameMode === GameMode.NORMAL) {
+      if (!allUsersReady && this.state.gameMode === GameMode.CUSTOM_LOBBY) {
         this.state.addMessage({
           authorId: "Server",
           payload: `Not all players are ready.`,
@@ -309,9 +324,11 @@ export class OnRoomNameCommand extends Command<
   execute({ client, message: roomName }) {
     roomName = cleanProfanity(roomName)
     try {
+      const user = this.state.users.get(client.auth?.uid)
       if (
-        client.auth?.uid == this.state.ownerId &&
-        this.state.name != roomName
+        this.state.name != roomName &&
+        (client.auth?.uid == this.state.ownerId ||
+          (user && [Role.ADMIN, Role.MODERATOR].includes(user.role)))
       ) {
         this.room.setName(roomName)
         this.state.name = roomName
@@ -344,6 +361,35 @@ export class OnRoomPasswordCommand extends Command<
   }
 }
 
+export class OnRoomChangeRankCommand extends Command<
+  PreparationRoom,
+  {
+    client: Client
+    minRank: EloRank | null
+    maxRank: EloRank | null
+  }
+> {
+  execute({ client, minRank, maxRank }) {
+    try {
+      if (
+        client.auth?.uid == this.state.ownerId &&
+        (minRank !== this.state.minRank || maxRank !== this.state.maxRank)
+      ) {
+        if (EloRankThreshold[minRank] > EloRankThreshold[maxRank]) {
+          if (minRank !== this.state.minRank) maxRank = minRank
+          else minRank = maxRank
+        }
+
+        this.room.setMinMaxRanks(minRank, maxRank)
+        this.state.minRank = minRank
+        this.state.maxRank = maxRank
+      }
+    } catch (error) {
+      logger.error(error)
+    }
+  }
+}
+
 export class OnToggleEloCommand extends Command<
   PreparationRoom,
   {
@@ -365,8 +411,12 @@ export class OnToggleEloCommand extends Command<
           authorId: "server",
           payload: `Room leader ${
             noElo ? "disabled" : "enabled"
-          } ELO gain for this game.`,
+          } ELO gain for this game. Players need to ready again.`,
           avatar: leader?.avatar
+        })
+
+        this.state.users.forEach((user) => {
+          user.ready = false
         })
       }
     } catch (error) {
@@ -499,7 +549,8 @@ export class OnToggleReadyCommand extends Command<
   execute({ client, ready }) {
     try {
       // cannot toggle ready in quick play / ranked / tournament game mode
-      if (this.room.state.gameMode !== GameMode.NORMAL && ready !== true) return
+      if (this.room.state.gameMode !== GameMode.CUSTOM_LOBBY && ready !== true)
+        return
 
       // logger.debug(this.state.users.get(client.auth.uid).ready);
       if (client.auth?.uid && this.state.users.has(client.auth.uid)) {
@@ -514,7 +565,7 @@ export class OnToggleReadyCommand extends Command<
           : MAX_PLAYERS_PER_GAME
 
       if (
-        this.state.gameMode !== GameMode.NORMAL &&
+        this.state.gameMode !== GameMode.CUSTOM_LOBBY &&
         this.state.users.size === nbExpectedPlayers &&
         values(this.state.users).every((user) => user.ready)
       ) {

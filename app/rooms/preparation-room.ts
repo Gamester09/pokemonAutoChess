@@ -19,6 +19,7 @@ import {
   OnLeaveCommand,
   OnNewMessageCommand,
   OnRemoveBotCommand,
+  OnRoomChangeRankCommand,
   OnRoomNameCommand,
   OnRoomPasswordCommand,
   OnToggleEloCommand,
@@ -59,6 +60,14 @@ export default class PreparationRoom extends Room<PreparationState> {
     updateLobby(this)
   }
 
+  async setMinMaxRanks(minRank: EloRank, maxRank: EloRank) {
+    await this.setMetadata(<IPreparationMetadata>{
+      minRank: minRank,
+      maxRank: maxRank
+    })
+    updateLobby(this)
+  }
+
   async setGameStarted(gameStartedAt: string) {
     await this.setMetadata(<IPreparationMetadata>{ gameStartedAt })
   }
@@ -67,8 +76,10 @@ export default class PreparationRoom extends Room<PreparationState> {
     ownerId?: string
     roomName: string
     minRank?: EloRank
+    maxRank?: EloRank
     gameMode: GameMode
     noElo?: boolean
+    password?: string
     autoStartDelayInSeconds?: number
     whitelist?: string[]
     blacklist?: string[]
@@ -89,6 +100,7 @@ export default class PreparationRoom extends Room<PreparationState> {
       ownerName:
         options.gameMode === GameMode.QUICKPLAY ? null : options.ownerId,
       minRank: options.minRank ?? null,
+      maxRank: options.maxRank ?? null,
       noElo: options.noElo ?? false,
       gameMode: options.gameMode,
       whitelist: options.whitelist ?? [],
@@ -97,14 +109,11 @@ export default class PreparationRoom extends Room<PreparationState> {
       tournamentId: options.tournamentId ?? null,
       bracketId: options.bracketId ?? null,
       gameStartedAt: null,
-      password: null,
+      password: options.password ?? null,
       type: "preparation"
     })
     this.maxClients = 8
-    if (
-      options.gameMode !== GameMode.NORMAL &&
-      options.gameMode !== GameMode.QUICKPLAY
-    ) {
+    if (options.gameMode === GameMode.TOURNAMENT) {
       this.autoDispose = false
     }
 
@@ -206,6 +215,22 @@ export default class PreparationRoom extends Room<PreparationState> {
         logger.error(error)
       }
     })
+
+    this.onMessage(
+      Transfer.CHANGE_ROOM_RANKS,
+      (client, { minRank, maxRank }) => {
+        logger.info(Transfer.CHANGE_ROOM_RANKS, this.roomName, minRank, maxRank)
+        try {
+          this.dispatcher.dispatch(new OnRoomChangeRankCommand(), {
+            client,
+            minRank,
+            maxRank
+          })
+        } catch (error) {
+          logger.error(error)
+        }
+      }
+    )
 
     this.onMessage(Transfer.TOGGLE_NO_ELO, (client, message) => {
       logger.info(Transfer.TOGGLE_NO_ELO, this.roomName)
